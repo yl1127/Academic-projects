@@ -1,0 +1,507 @@
+---
+title: "COVID-19 Healthy Diet - CART, Random Forest"
+author: "Yunlong Pan 113061415"
+date: "5/9/2020"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Introduction
+
+In the past couple months, we’ve witnessed doctors, nurses, paramedics and thousands of medical workers putting their lives on the frontline to save patients who are infected. And as the battle with COVID-19 continues, we should all ask ourselves – What should we do to help out? What can we do to protect our loved ones, those who sacrifice for us, and ourselves from this pandemic?
+
+And a simple answer is : We need to protect our families and our own healths by adapting to a healthy diet.
+
+The USDA Center for Nutrition Policy and Promotion recommends a very simple daily diet intake guideline: 30% grains, 40% vegetables, 10% fruits, and 20% protein, but are we really eating in the healthy eating style recommended by these food divisions and balances?
+
+In this dataset, I have combined data of different types of food, world population obesity and undernourished rate, and global COVID-19 cases count from around the world in order to learn more about how a healthy eating style could help combat the Corona Virus. And from the dataset, we can gather information regarding diet patterns from countries with lower COVID infection rate, and adjust our own diet accordingly.
+
+# Libraries Required
+```{r}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(maps)
+library(caTools)
+```
+
+## Load Data
+```{r}
+data_kg<-read.csv('Food_Supply_Quantity_kg_Data.csv')
+data_kg1<-data_kg[-c(32,31,30,29,28,27,26,1)]
+data_kg2<-data.frame(data_kg1,'HighRecovery'<-as.numeric(data_kg$Recovered>0.01))
+colnames(data_kg2)[ncol(data_kg2)]<-'HighRecovery'
+# data_kg3<-na.omit(data_kg2)
+```
+
+# Exploratory Data Analysis and Descriptive Statistics
+```{r}
+# Find out Total Number of Rows and Columns 
+dim(data_kg2) 
+# Find out Names of the Columns (Features) 
+names(data_kg2) 
+# Find out Class of each Feature, along with internal structure 
+str(data_kg2) 
+# Check top 10 and bottom 10 Rows of the Dataset 
+head(data_kg2,5) 
+# Check for Missing Values 
+colSums(is.na(data_kg2)) 
+table(HighRecovery) 
+prop.table(table(HighRecovery))
+data_kg3<-na.omit(data_kg2)
+```
+Key observations:
+Number of Rows and Columns:
+
+> The number of rows in the dataset is 170
+> The number of columns (Features) in the dataset is 25
+
+Missing values check:
+> 10 Missing values present in the dataset.
+
+Proportion of Responders Vs Non Responders:
+> Total Low Recovery(less than 1%): 96 (60%)
+> Total High Recovery(more than 1%): 64 (40%)
+
+```{r}
+library(plotrix)
+
+pie3D(prop.table((table(data_kg3$HighRecovery))), 
+      main='High Vs Low Recovery in Input Data set', 
+      #explode=0.1, 
+      labels=c("High", "Low"), 
+      col = c("Turquoise", "Medium Sea Green") 
+      )
+```
+
+## Countries included
+```{r}
+map('world',data_kg1$Country, fill = T, col=8)
+```
+
+## Summary statistics
+```{r}
+summary(data_kg3)
+```
+
+## Data Partition
+Creating Training and Testing Dataset
+The given data set is divided into Training and Testing data set, with 80:20 proportion.
+The distribution of High Recovery and Low Recovery Class is verified in both the data sets, and ensured it’s close to equal.
+```{r}
+set.seed(123)
+split = sample.split(data_kg3$HighRecovery,SplitRatio = 0.8)
+dataTrain = subset(data_kg3, split == TRUE)
+dataTest = subset(data_kg3, split == FALSE)
+dim(dataTrain)
+dim(dataTest)
+```
+## Check if distribution of partition data is correct
+```{r}
+table(dataTrain$HighRecovery) 
+table(dataTest$HighRecovery)
+prop.table((table(dataTrain$HighRecovery))) 
+prop.table((table(dataTest$HighRecovery))) 
+
+par(mfrow=c(1,2)) 
+
+pie3D(prop.table((table(dataTrain$HighRecovery))), 
+      main='Training Data set', 
+      #explode=0.1, 
+      labels=c("Low", "High"), 
+      col = c("Turquoise", "Medium Sea Green") 
+      ) 
+pie3D(prop.table((table(dataTest$HighRecovery))), 
+      main='Testing Data set', 
+      #explode=0.1, 
+      labels=c("Low", "High"), 
+      col = c("Aquamarine", "Dark Sea Green") 
+      )
+```
+
+# Model Building - CART
+
+Decision Trees are commonly used in data mining with the objective of creating a model that predicts the value of a target (or dependent variable) based on the values of several input (or independent variables).
+
+As an Umbrella term, the Classification and Regression Tree refers to the following decision trees:
+
+> Classification Trees: where the target variable is categorical and the tree is used to identify the “class” within which a target variable would likely fall into.
+
+> Regression Trees: where the target variable is continuous and tree is used to predict its value.
+
+The CART algorithm is structured as a sequence of questions, the answers to which determine what the next question, if any should be. The result of these questions is a tree like structure where the ends are terminal nodes at which point there are no more questions.
+
+## Model Building - CART
+## Setting the control parameter inputs for rpart
+```{r}
+r.ctrl <- rpart.control(minsplit = 5,
+                        minbucket = 5,
+                        cp = 0,
+                        xval = 5
+                        )
+```
+# Build the model on Training Dataset
+```{r}
+#Exclude columns - "Customer ID" and "Acct Opening Date"
+cart.train <- dataTrain
+names(cart.train)
+m1 <- rpart(formula = HighRecovery~.,
+            data = cart.train,
+            method = "class",
+            control = r.ctrl
+            )
+
+library(rattle) 
+library(RColorBrewer) 
+
+fancyRpartPlot(m1)
+printcp(m1) 
+plotcp(m1) 
+ptree<- prune(m1, cp= 0.0017 ,"CP") 
+printcp(ptree) 
+```
+
+## Ploting the final CART model 
+```{r}
+fancyRpartPlot(ptree, 
+               uniform = TRUE, 
+               main = "Final Tree", 
+               palettes = c("Blues", "Oranges")
+               )
+```
+# Performance Measures on Training Data Set
+The following model performance measures will be calculated on the training set to gauge the goodness of the model:
+
+> KS
+
+> Area Under Curve (AUC)
+
+> Gini Coefficient
+
+> Classification Error
+
+## Predict Training Data Set
+```{r}
+cart.train$predict.class = predict(ptree, cart.train, type = "class")
+cart.train$predict.score = predict(ptree, cart.train, type = "prob")
+```
+
+
+## KS and Area under Curve
+```{r}
+library(ROCR) 
+library(ineq)
+pred <- prediction(cart.train$predict.score[,2], cart.train$HighRecovery) 
+perf <- performance(pred, "tpr", "fpr") 
+
+KS <- max(attr(perf, 'y.values')[[1]]-attr(perf, 'x.values')[[1]]) 
+
+auc <- performance(pred,"auc"); 
+auc <- as.numeric(auc@y.values) 
+
+gini = ineq(cart.train$predict.score[,2], type="Gini") 
+with(cart.train, table(HighRecovery, predict.class)) 
+plot(perf) 
+KS
+auc
+gini
+```
+
+## Summary:CART - Model Performance(Training Dataset):
+The KS = 81.6% and the AUC = 95.9% which indicates that the model is very good.
+
+
+The Gini Coefficient = 54.9% also indicates that the model is good.
+
+Confusion matrix:
+
+1. Accuracy = (68 + 47)/(68+47+8+4) = 90.56%
+
+2. Classification Error Rate = 1 - Accuracy = 9.44%
+
+## Predict Test Data Set
+```{r}
+## Scoring Holdout sample 
+cart.test <- dataTest
+cart.test$predict.class = predict(ptree, cart.test, type = "class")
+cart.test$predict.score = predict(ptree, cart.test, type = "prob")
+#head(cart.test)
+```
+## KS and Area under Curve
+```{r}
+pred <- prediction(cart.test$predict.score[,2], cart.test$HighRecovery)
+perf <- performance(pred, "tpr", "fpr") 
+KS <- max(attr(perf, 'y.values')[[1]]-attr(perf, 'x.values')[[1]]) 
+auc <- performance(pred,"auc"); 
+auc <- as.numeric(auc@y.values) 
+gini = ineq(cart.test$predict.score[,2], type="Gini") 
+with(cart.test, table(HighRecovery, predict.class)) 
+plot(perf) 
+KS
+auc
+gini
+```
+## CART - Model Performance(Test Dataset):
+The KS = 55.5% and the AUC = 70.0% which indicates that the model is  good.
+
+The Gini Coefficient = 42.98% also indicates that the model in good.
+
+Confusion matrix:
+
+1. Accuracy = (12 + 12)/(12+7+1+12) = 75%
+
+2. Classification Error Rate = 1 - Accuracy = 25%
+
+# CART - Conclusion
+Comparative Summary of the CART Model on Training and Testing Dataset is as follows:
+```{r echo=F, results='asis'}
+library('knitr')
+conclusion<-data.frame("Measures"<-c('KS','AUC','Gini','Accuracy','CeR'),
+           "Train"<-c(81.6,95.9,54.9,90.56,9.44),
+           Test<-c(55.5,70.0,42.98,75,25),
+           '%Deviation'<-c(32.0,27.0,21.7,17.2,62))
+names(conclusion)[1]='Measures'
+names(conclusion)[2]='Train'
+names(conclusion)[3]='Test'
+names(conclusion)[4]='%Deviation'
+kable(conclusion)
+
+```
+
+CeR= Clasification error rate
+
+The good performance on the model performance measures indicates good prediction making capabilities of the developed CART model.
+
+# Model Building - Random Forest
+
+A Supervised Classification Algorithm, as the name suggests, this algorithm creates the forest with a number of trees in random order. In general, the more trees in the forest the more robust the forest looks like. In the same way in the random forest classifier, the higher the number of trees in the forest gives the high accuracy results.
+
+Some advantages of using Random Forest are as follows:
+> The same random forest algorithm or the random forest classifier can use for both classification and the regression task.
+
+> Random forest classifier will handle the missing values.
+
+> When we have more trees in the forest, random forest classifier won’t over fit the model.
+
+> Can model the random forest classifier for categorical values also.
+
+## Creating Training and Testing Dataset for RF Model
+
+```{r}
+rf.train <- dataTrain
+rf.test  <- dataTest
+
+dim(rf.train)
+dim(rf.test)
+library(randomForest)
+```
+## Random Forest Model - Train Dataset
+
+The model is built with dependant variable as HighRecovery, and considering all independent variables.
+```{r}
+RF=randomForest(as.factor(HighRecovery)~.,
+                data = rf.train,
+                ntree = 501, mtry = 3, nodesize = 10,
+                importance=TRUE)
+print(RF)
+```
+## Out of Bag Error Rate:
+Random Forests algorithm is a classifier based on primarily two methods - bagging and random subspace method.
+
+Suppose we decide to have S number of trees in our forest then we first create S datasets of “same size as original” created from random resampling of data with-replacement. Each of these datasets is called a bootstrap dataset.
+
+Due to “with-replacement” option, every dataset can have duplicate data records and at the same time, can be missing several data records from original datasets. This is called Bagging.
+
+The algorithm uses m (=sqrt(M)) random sub features out of M possible features to create any tree. This is called random subspace method.
+
+After creating the classifiers (S trees), there is a subset of records which does not include any of the records part of the classifier tree. This subset, is a set of boostrap datasets which does not contain a particular record from the original dataset. This set is called out-of-bag examples. There are n such subsets (one for each data record in original dataset T). OOB classifier is the aggregation of all such records.
+
+Out-of-bag estimate for the generalization error is the error rate of the outof-bag classifier on the training set (compare it with known yi’s).
+
+Out-of-bag (OOB) error, also called out-of-bag estimate, is a method of measuring the prediction error of random forests, boosted decision trees, and other machine learning models utilizing bootstrap aggregating to subsample data samples used for training.
+
+Out-of-bag estimates help in avoiding the need for an independent validation dataset.
+
+## The graphical output for the OOB estimate of error rate.
+```{r}
+#dev.off()
+plot(RF, main="")
+legend("topright", c("OOB", "0", "1"), text.col=1:6, lty=1:3, col=1:3) 
+title(main="Error Rates Random Forest Training data")
+```
+
+## The output in tabular form for the OOB estimate of error rate.
+
+It is observed that as the number of tress increases, the OOB error rate starts decreasing till it reaches around 80th tree with OOB = 0.1757 (the minimum value). After this, the OOB doesn’t decrease further and remains around steady. Hence, the optimal number of trees would be around 80.
+
+## Variable Importance
+
+To understand the important variables in Random Forest, the following measures are generally used:
+> Mean Decrease in Accuracy is based on permutation >> Randomly permute values of a variable for which importance is to be computed in the OOB sample >> Compute the Error Rate with permuted values >> Compute decrease in OOB Error rate (Permuted - Not permuted) >> Average the decrease over all the trees > Mean Decrease in Gini is computed as “total decrease in node impurities from splitting on the variable, averaged over all trees”
+
+```{r}
+#List the iimportance of the variable
+impVar <- round(randomForest::importance(RF), 2) 
+impVar[order(impVar[,3], decreasing=TRUE),] 
+```
+## Optimal mtry value
+In the random forests the number of variables available for splitting at each tree node is referred to as the mtry parameter. The optimum number of variables is obtained using tuneRF function.
+x = Predictor variables
+y = Target variable
+mtryStart = starting value of mtry
+ntree = No of tree used for tuning
+stepFactor = steps to increase (deflate) mtry
+improve = the relative oob by atleast this much
+trace = print the trace or not
+plot = plot OOB vs mtry graph or not
+doBest = Finally build the RF using optimal mtry
+nodesize = min terminal node size
+importance = compute variable importance or not 
+```{r}
+#Tuning Random Forest
+# tRF<- tuneRF(x = rf.train,
+#              y=as.factor(rf.train$HighRecovery),
+#              mtryStart = 5, #Aprox, Sqrt of Total no. of variables
+#              ntreeTry = 100,
+#              stepFactor = 1,
+#              improve = 0.0001,
+#              trace = TRUE,
+#              plot = TRUE,
+#              doBest = TRUE,
+#              nodesize = 10,
+#              importance = TRUE
+# )
+tRF <- train(
+  as.factor(HighRecovery) ~., data =rf.train, method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 100)
+tRF$finalModel
+
+```
+
+## KS and Area under Curve
+```{r}
+rf.train$predict.class <- predict(tRF$finalModel, rf.train, type = "class")
+rf.train$predict.score <- predict(tRF$finalModel, rf.train, type = "prob")
+#head(rf.train) 
+#class(rf.train$predict.score)
+library(ROCR) 
+pred <- prediction(rf.train$predict.score[,2], rf.train$HighRecovery) 
+perf <- performance(pred, "tpr", "fpr") 
+#plot(perf) 
+KS <- max(attr(perf, 'y.values')[[1]]-attr(perf, 'x.values')[[1]]) 
+KS 
+# Area Under Curve 
+auc <- performance(pred,"auc");
+auc <- as.numeric(auc@y.values) 
+auc 
+# Gini Coefficient 
+library(ineq) 
+gini = ineq(rf.train$predict.score[,2], type="Gini") 
+gini 
+# Classification Error 
+with(rf.train, table(HighRecovery, predict.class))
+```
+KS=68.6% AUC=88.0% Gini=45.5% Accuracy=85.03% CeR=14.96%
+
+## Model Performance on Testing Data Set
+
+```{r}
+rf.test$predict.class <- predict(tRF$finalModel, rf.test, type="class")
+rf.test$predict.score <- predict(tRF$finalModel, rf.test, type="prob") 
+```
+## KS and AUC
+```{r}
+pred1 <- prediction(rf.test$predict.score[,2], rf.test$HighRecovery) 
+perf1 <- performance(pred1, "tpr", "fpr") 
+plot(perf1) 
+KS1 <- max(attr(perf1, 'y.values')[[1]]-attr(perf1, 'x.values')[[1]]) 
+KS1 
+# Area Under Curve 
+auc1 <- performance(pred1,"auc"); 
+auc1 <- as.numeric(auc1@y.values) 
+auc1 
+# Gini Coefficient 
+library(ineq) 
+gini1 = ineq(rf.test$predict.score[,2], type="Gini") 
+gini1 
+# Classification Error 
+with(rf.test, table(HighRecovery, predict.class))
+```
+KS = 42.5% AUC = 71.9% Gini = 39.5% Accuracy = 68.8% CeR = 31.2%
+
+## Random Forest Conclusion
+```{r}
+library('knitr')
+conclusion<-data.frame("Measures"<-c('KS','AUC','Gini','Accuracy','CeR'),
+           'Train'<-c(68.6,88.0,45.5,85.03,14.96),
+           'Test'<-c(42.5,71.9,39.5,68.8,31.2),
+           '%Deviation'<-c(38.0,18.3,13.2,19.1,52.1)
+           )
+names(conclusion)[1]='Measures'
+names(conclusion)[2]='Train'
+names(conclusion)[3]='Test'
+names(conclusion)[4]='%Deviation'
+kable(conclusion)
+```
+
+# Model Comparision
+
+The main objective of the project was to develop a predictive model to predict if a country suffering COVID-19 will have a high recovery using tools of Machine Learning. In this context, the key parameter for model evaluation was ‘Accuracy’, i.e., the proportion of the total number of predictions that were correct.
+
+The predictive models was be developed using the following Machine Learning techniques:
+> Classification Tree - CART
+> Random Forest
+
+The snap shot of the performance of all the models on accuracy, over-fitting and other model performance measures is provided below:
+
+## CART
+```{r}
+library('knitr')
+conclusion<-data.frame("Measures"<-c('KS','AUC','Gini','Accuracy','CeR'),
+           "Train"<-c(81.6,95.9,54.9,90.56,9.44),
+           Test<-c(55.5,70.0,42.98,75,25),
+           '%Deviation'<-c(32.0,27.0,21.7,17.2,62))
+names(conclusion)[1]='Measures'
+names(conclusion)[2]='Train'
+names(conclusion)[3]='Test'
+names(conclusion)[4]='%Deviation'
+kable(conclusion)
+
+```
+
+## Random Forest
+```{r}
+library('knitr')
+RF_conclusion<-data.frame("Measures"<-c('KS','AUC','Gini','Accuracy','CeR'),
+           'Train'<-c(68.6,88.0,45.5,85.03,14.96),
+           'Test'<-c(42.5,71.9,39.5,68.8,31.2),
+           '%Deviation'<-c(38.0,18.3,13.2,19.1,52.1)
+           )
+names(RF_conclusion)[1]='Measures'
+names(RF_conclusion)[2]='Train'
+names(RF_conclusion)[3]='Test'
+names(RF_conclusion)[4]='%Deviation'
+kable(RF_conclusion)
+```
+
+## Interpretation:
+
+The Random Forest method has given poor performance compared to CART. 
+
+The CART method has the best performance (best accuracy) among all the models. The percentage deviation between Training and Testing Dataset also is reasonably under control, suggesting a robust model.
+
+CART seems to be the overall winner because of the best accuracy % and reasonable deviations.
+
+# Conclusion
+
+During model building and prediction using COVID-19 Healthy Diet Dataset, I find it's difficult to get a good CART or Random Forest model (Best accuracy is only about 50%) to predict confirmed rate or death rate by food supply(in kg). 
+
+However, the result model between food consuming and recovered rate is good(75% accuracy in CART model) which tells us high percentage of eggs and fishes in daily food consumed may be help us have a high recovered rate among all confirmed cases.
+
+# Appendix
