@@ -1,6 +1,6 @@
 - 👋 Hi, I’m @yl1127
 - 👀 I’m interested in applied math.
-- 🌱 I’m currently learning Deep learning and Reinforcement learning.
+- 🌱 I’m currently study the Deep learning and Reinforcement learning.
 - 📫 How to reach me ...
 
 <!---
