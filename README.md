@@ -1,4 +1,4 @@
-- 👋 Hi, I’m @yl1127
+- 👋 Hi, I’m Yunlong@yl1127
 - 👀 I’m interested in applied math.
 - 🌱 I’m currently study the Deep learning and Reinforcement learning.
 - 📫 How to reach me ...
