@@ -1,0 +1,11 @@
+,question,output_variables,year,scenario,region
+0,What is the World Effective Radiative Forcing|Aerosols|Direct Effect|OC under ssp370-lowNTCF-gidden in 2042?,Effective Radiative Forcing|Aerosols|Direct Effect|OC,2042,ssp370-lowNTCF-gidden,World
+1,What is the World Effective Radiative Forcing|Aerosols|Direct Effect|SOx under ssp126 in 2090?,Effective Radiative Forcing|Aerosols|Direct Effect|SOx,2090,ssp126,World
+2,What is the World|Northern Hemisphere|Ocean Effective Radiative Forcing|Aerosols|Direct Effect|OC under ssp534-over in 2051?,Effective Radiative Forcing|Aerosols|Direct Effect|OC,2051,ssp534-over,World|Northern Hemisphere|Ocean
+3,What is the World|Northern Hemisphere|Land Effective Radiative Forcing|Aerosols|Direct Effect|BC under ssp585 in 1797?,Effective Radiative Forcing|Aerosols|Direct Effect|BC,1797,ssp585,World|Northern Hemisphere|Land
+4,What is the World|Northern Hemisphere|Land Effective Radiative Forcing|Aerosols|Direct Effect|BC under ssp370 in 2080?,Effective Radiative Forcing|Aerosols|Direct Effect|BC,2080,ssp370,World|Northern Hemisphere|Land
+5,What is the World|Northern Hemisphere|Land Effective Radiative Forcing|Aerosols|Direct Effect|OC under ssp119 in 1807?,Effective Radiative Forcing|Aerosols|Direct Effect|OC,1807,ssp119,World|Northern Hemisphere|Land
+6,What is the World|Northern Hemisphere|Ocean Atmospheric Concentrations|CO2 under ssp434 in 1878?,Atmospheric Concentrations|CO2,1878,ssp434,World|Northern Hemisphere|Ocean
+7,What is the World|Northern Hemisphere|Ocean Effective Radiative Forcing|Aerosols|Direct Effect|OC under ssp534-over in 2018?,Effective Radiative Forcing|Aerosols|Direct Effect|OC,2018,ssp534-over,World|Northern Hemisphere|Ocean
+8,What is the World|Northern Hemisphere|Land Effective Radiative Forcing|Aerosols|Direct Effect|SOx under ssp370 in 2040?,Effective Radiative Forcing|Aerosols|Direct Effect|SOx,2040,ssp370,World|Northern Hemisphere|Land
+9,What is the World|Northern Hemisphere|Land Atmospheric Concentrations|CO2 under ssp460 in 1939?,Atmospheric Concentrations|CO2,1939,ssp460,World|Northern Hemisphere|Land
